@@ -1,0 +1,411 @@
+Agent Environment
+    Vars:
+    	Train_state:{Approach,Waiting,Going};
+    end Vars
+    Actions = {none,Keep_Going,Stop,null};
+    Protocol:
+        Train_state=Approach :{null};
+    	Train_state=Going :{Keep_Going};
+    	Train_state=Waiting :{Stop};
+	Other: {none};
+    end Protocol
+    Evolution:
+		Train_state=Going      if TMA_Gen.Action=Pre_Going;
+		Train_state=Waiting    if TMA_Gen.Action=Pre_Stop;
+		Train_state=Waiting    if Action=none;
+    end Evolution
+end Agent
+
+--TMA Generation Status
+Agent TMA_Gen
+    Vars:
+    	TMA_state:{Pre_apply,Generate,Non_Generate};
+    end Vars
+    Actions = {none,Pre_Going,Pre_Stop,null};
+    Protocol:
+        TMA_state=Pre_apply :{null};
+    	TMA_state=Generate :{Pre_Going};
+    	TMA_state=Non_Generate :{Pre_Stop};
+		Other: {none};
+    end Protocol
+	Evolution:
+		TMA_state=Generate	if ((ForeignObject.Action=Normal) and (CrossingMonitor.Action=Normal)
+		                       and (Next_Block.Action=show_free) and (GuardBarriers.Action=Normal));
+		TMA_state=Non_Generate if ((ForeignObject.Action=Abnormal) or (CrossingMonitor.Action=Abnormal)
+		                           or (Next_Block.Action=show_busy) or (GuardBarriers.Action=Abnormal));
+    end Evolution
+end Agent
+
+--External factors (foreign object intrusion1)
+Agent ForeignObject_Sensor1
+  Vars:
+    	value:{get_true,keep_true,get_false,keep_false};
+    end Vars
+  Actions = {none,intru,nointru};
+	Protocol:
+	value=get_true : {intru};
+        value=get_false : {nointru};
+        value=keep_true : {intru};
+        value=keep_false : {nointru};
+    	Other : {none};
+    end Protocol
+    Evolution:
+    	value=keep_true  if value=get_true;
+    	value=keep_false if value=get_false;
+    	value=get_true  if value=get_false;
+    	value=get_false if value=get_true;
+        value=keep_true  if value=keep_true;
+    	value=keep_false if value=keep_false;
+    	value=get_true  if value=keep_false;
+    	value=get_false if value=keep_true;
+    end Evolution
+end Agent
+
+--External factors  (foreign object intrusion2)
+Agent ForeignObject_Sensor2
+  Vars:
+    	value:{get_true,keep_true,get_false,keep_false};
+  end Vars
+  Actions = {none,intru,nointru};
+	Protocol:
+	value=get_true : {intru};
+        value=get_false : {nointru};
+        value=keep_true : {intru};
+        value=keep_false : {nointru};
+    	Other : {none};
+    end Protocol
+    Evolution:
+    	value=keep_true  if value=get_true;
+    	value=keep_false if value=get_false;
+    	value=get_true  if value=get_false;
+    	value=get_false if value=get_true;
+        value=keep_true  if value=keep_true;
+    	value=keep_false if value=keep_false;
+    	value=get_true  if value=keep_false;
+    	value=get_false if value=keep_true;
+    end Evolution
+end Agent
+
+--foreign object intrusion Jugement
+Agent ForeignObject
+    Vars:
+      value: boolean;
+    end Vars
+    Actions = {none,Abnormal,Normal};
+	  Protocol:
+		  value=true : {Abnormal};
+		  value=false : {Normal};
+    	  Other : {none};
+      end Protocol
+	  Evolution:
+		  value=true  if (ForeignObject_Sensor1.Action=intru) or (ForeignObject_Sensor2.Action=intru);
+		  value=false if (ForeignObject_Sensor1.Action=nointru) and (ForeignObject_Sensor2.Action=nointru);
+      end Evolution
+end Agent
+
+--External factors  (crossing monitoring1)
+Agent CrossingMonitor_Sensor1
+  Vars:
+      value:{get_true,keep_true,get_false,keep_false};
+  end Vars
+  Actions = {none,obstacle,noobstacle};
+	Protocol:
+		value=get_true : {obstacle};
+		value=keep_true : {obstacle};
+		value=get_false : {noobstacle};
+		value=keep_false : {noobstacle};
+    	Other : {none};
+    end Protocol
+    Evolution:
+    	value=keep_true  if value=get_true;
+    	value=keep_false if value=get_false;
+    	value=get_true  if value=get_false;
+    	value=get_false if value=get_true;
+        value=keep_true  if value=keep_true;
+    	value=keep_false if value=keep_false;
+    	value=get_true  if value=keep_false;
+    	value=get_false if value=keep_true;
+    end Evolution
+end Agent
+
+--External factors  (crossing monitoring2)
+Agent CrossingMonitor_Sensor2
+  Vars:
+      value:{get_true,keep_true,get_false,keep_false};
+  end Vars
+  Actions = {none,obstacle,noobstacle};
+	Protocol:
+		value=get_true : {obstacle};
+		value=keep_true : {obstacle};
+		value=get_false : {noobstacle};
+		value=keep_false : {noobstacle};
+    	Other : {none};
+    end Protocol
+    Evolution:
+    	value=keep_true  if value=get_true;
+    	value=keep_false if value=get_false;
+    	value=get_true  if value=get_false;
+    	value=get_false if value=get_true;
+        value=keep_true  if value=keep_true;
+    	value=keep_false if value=keep_false;
+    	value=get_true  if value=keep_false;
+    	value=get_false if value=keep_true;
+    end Evolution
+end Agent
+
+-- CrossingMonitor Jugement
+Agent CrossingMonitor
+    Vars:
+      value: boolean;
+    end Vars
+    Actions = {none,Abnormal,Normal};
+	  Protocol:
+		  value=true : {Abnormal};
+		  value=false : {Normal};
+    	  Other : {none};
+      end Protocol
+	  Evolution:
+		  value=true  if (CrossingMonitor_Sensor1.Action=obstacle) or (CrossingMonitor_Sensor2.Action=obstacle);
+		  value=false if (CrossingMonitor_Sensor1.Action=noobstacle) and (CrossingMonitor_Sensor2.Action=noobstacle);
+      end Evolution
+end Agent
+
+--Next block video monitoring
+Agent NextBlock_Sensor1
+    Vars:
+      value:{get_true,keep_true,get_false,keep_false};
+    end Vars
+    Actions = {none,show_busy,show_free};
+	Protocol:
+		value=get_true:{show_busy};
+		value=keep_true:{show_busy};
+		value=keep_false:{show_free};
+		value=get_false:{show_free};
+		Other: {none};
+    end Protocol
+    Evolution:
+    	value=keep_true  if value=get_true;
+    	value=keep_false if value=get_false;
+    	value=get_true  if value=get_false;
+    	value=get_false if value=get_true;
+        value=keep_true  if value=keep_true;
+    	value=keep_false if value=keep_false;
+    	value=get_true  if value=keep_false;
+    	value=get_false if value=keep_true;
+    end Evolution
+end Agent
+
+--Next block registration network monitoring
+Agent NextBlock_Sensor2
+    Vars:
+      value:{get_true,keep_true,get_false,keep_false};
+    end Vars
+    Actions = {none,show_busy,show_free};
+	Protocol:
+		value=get_true:{show_busy};
+		value=keep_true:{show_busy};
+		value=keep_false:{show_free};
+		value=get_false:{show_free};
+		Other: {none};
+    end Protocol
+    Evolution:
+    	value=keep_true  if value=get_true;
+    	value=keep_false if value=get_false;
+    	value=get_true  if value=get_false;
+    	value=get_false if value=get_true;
+        value=keep_true  if value=keep_true;
+    	value=keep_false if value=keep_false;
+    	value=get_true  if value=keep_false;
+    	value=get_false if value=keep_true;
+    end Evolution
+end Agent
+
+--Next block state Jugement
+Agent Next_Block
+    Vars:
+      value: boolean;
+    end Vars
+    Actions = {none,show_busy,show_free};
+	Protocol:
+		value=true : {show_busy};
+		value=false :{show_free};
+		Other: {none};
+    end Protocol
+	Evolution:
+		value=true  if (NextBlock_Sensor1.Action=show_busy) or (NextBlock_Sensor2.Action=show_busy);
+		value=false if (NextBlock_Sensor1.Action=show_free) and (NextBlock_Sensor2.Action=show_free);
+    end Evolution
+end Agent
+
+
+--GuardBarriers video monitoring
+Agent GuardBarriers_Sensor1
+    Vars:
+      value:{get_true,keep_true,get_false,keep_false};
+    end Vars
+    Actions = {none,Abnormal,Normal};
+	  Protocol:
+		  value=get_true:{Abnormal};
+		  value=keep_true:{Abnormal};
+		  value=keep_false:{Normal};
+		  value=get_false:{Normal};
+    	  Other : {none};
+      end Protocol
+    Evolution:
+    	value=keep_true  if value=get_true;
+    	value=keep_false if value=get_false;
+    	value=get_true  if value=get_false;
+    	value=get_false if value=get_true;
+        value=keep_true  if value=keep_true;
+    	value=keep_false if value=keep_false;
+    	value=get_true  if value=keep_false;
+    	value=get_false if value=keep_true;
+    end Evolution
+end Agent
+
+--GuardBarriers sensor monitoring
+Agent GuardBarriers_Sensor2
+    Vars:
+      value:{get_true,keep_true,get_false,keep_false};
+    end Vars
+    Actions = {none,Abnormal,Normal};
+	  Protocol:
+		  value=get_true:{Abnormal};
+		  value=keep_true:{Abnormal};
+		  value=keep_false:{Normal};
+		  value=get_false:{Normal};
+    	  Other : {none};
+      end Protocol
+    Evolution:
+    	value=keep_true  if value=get_true;
+    	value=keep_false if value=get_false;
+    	value=get_true  if value=get_false;
+    	value=get_false if value=get_true;
+        value=keep_true  if value=keep_true;
+    	value=keep_false if value=keep_false;
+    	value=get_true  if value=keep_false;
+    	value=get_false if value=keep_true;
+    end Evolution
+end Agent
+
+--GuardBarriers state Jugement
+Agent GuardBarriers
+    Vars:
+      value: boolean;
+    end Vars
+    Actions = {none,Abnormal,Normal};
+	Protocol:
+		value=true : {Abnormal};
+		value=false : {Normal};
+		Other: {none};
+    end Protocol
+	Evolution:
+		value=true  if (GuardBarriers_Sensor1.Action=Abnormal) or (GuardBarriers_Sensor2.Action=Abnormal);
+		value=false if (GuardBarriers_Sensor1.Action=Normal) and (GuardBarriers_Sensor2.Action=Normal);
+    end Evolution
+end Agent
+
+
+Agent Count
+   Vars:
+    	a: 0..4;
+    end Vars
+    Actions = {none};
+    Protocol:
+    	Other : {none};
+    end Protocol
+    Evolution:
+        a=0 if (Next_Block.Action=show_busy and ForeignObject.Action=Abnormal and CrossingMonitor.Action=Abnormal and GuardBarriers.Action=Abnormal);
+     	a=1 if (Next_Block.Action=show_free and ForeignObject.Action=Abnormal and CrossingMonitor.Action=Abnormal and GuardBarriers.Action=Abnormal)or
+     	       (Next_Block.Action=show_busy and ForeignObject.Action=Normal   and CrossingMonitor.Action=Abnormal and GuardBarriers.Action=Abnormal)or
+    	       (Next_Block.Action=show_busy and ForeignObject.Action=Abnormal and CrossingMonitor.Action=Normal   and GuardBarriers.Action=Abnormal)or
+    	       (Next_Block.Action=show_busy and ForeignObject.Action=Abnormal and CrossingMonitor.Action=Abnormal and GuardBarriers.Action=Normal);
+    	a=2 if (Next_Block.Action=show_free and ForeignObject.Action=Normal   and CrossingMonitor.Action=Abnormal and GuardBarriers.Action=Abnormal)or
+    	       (Next_Block.Action=show_free and ForeignObject.Action=Abnormal and CrossingMonitor.Action=Normal   and GuardBarriers.Action=Abnormal)or
+    	       (Next_Block.Action=show_free and ForeignObject.Action=Abnormal and CrossingMonitor.Action=Abnormal and GuardBarriers.Action=Normal)or
+    	       (Next_Block.Action=show_busy and ForeignObject.Action=Normal   and CrossingMonitor.Action=Normal   and GuardBarriers.Action=Abnormal)or
+    	       (Next_Block.Action=show_busy and ForeignObject.Action=Normal   and CrossingMonitor.Action=Abnormal and GuardBarriers.Action=Normal)or
+    	       (Next_Block.Action=show_busy and ForeignObject.Action=Abnormal and CrossingMonitor.Action=Normal   and GuardBarriers.Action=Normal);
+    	a=3 if (Next_Block.Action=show_free and ForeignObject.Action=Normal   and CrossingMonitor.Action=Normal   and GuardBarriers.Action=Abnormal)or
+    	       (Next_Block.Action=show_free and ForeignObject.Action=Normal   and CrossingMonitor.Action=Abnormal and GuardBarriers.Action=Normal)or
+    	       (Next_Block.Action=show_free and ForeignObject.Action=Abnormal and CrossingMonitor.Action=Normal   and GuardBarriers.Action=Normal)or
+    	       (Next_Block.Action=show_busy and ForeignObject.Action=Normal   and CrossingMonitor.Action=Normal   and GuardBarriers.Action=Normal);
+    	a=4 if (Next_Block.Action=show_free and ForeignObject.Action=Normal   and CrossingMonitor.Action=Normal   and GuardBarriers.Action=Normal);
+    end Evolution
+end Agent
+
+Evaluation
+  Gen_TMA          if TMA_Gen.TMA_state=Generate;
+  NonGen_TMA       if TMA_Gen.TMA_state=Non_Generate or TMA_Gen.TMA_state=Pre_apply;
+  Full_factors     if Count.a=4;
+  Partial_factors  if Count.a<4;
+  Consistency      if (((NextBlock_Sensor1.value=keep_false and NextBlock_Sensor2.value=keep_false ) or (NextBlock_Sensor1.value=keep_true and NextBlock_Sensor2.value=keep_true)) and
+                      (( GuardBarriers_Sensor1.value=keep_false and GuardBarriers_Sensor2.value=keep_false ) or (GuardBarriers_Sensor1.value=keep_true and GuardBarriers_Sensor2.value=keep_true)) and
+                      (( ForeignObject_Sensor1.value=keep_false and ForeignObject_Sensor2.value=keep_false ) or (ForeignObject_Sensor1.value=keep_true and ForeignObject_Sensor2.value=keep_true)) and
+                      (( CrossingMonitor_Sensor1.value=keep_false and CrossingMonitor_Sensor2.value=keep_false ) or (CrossingMonitor_Sensor1.value=keep_true and CrossingMonitor_Sensor2.value=keep_true)));
+  Keep_TMA         if (TMA_Gen.TMA_state=Generate and (CrossingMonitor_Sensor1.value=keep_false and CrossingMonitor_Sensor2.value=keep_false) and
+                      (GuardBarriers_Sensor1.value=keep_false and GuardBarriers_Sensor2.value=keep_false) and
+                      (ForeignObject_Sensor1.value=keep_false and ForeignObject_Sensor2.value=keep_false) and
+                      (NextBlock_Sensor1.value=keep_false and NextBlock_Sensor2.value=keep_false));
+  Next_Block_Busy  if Next_Block.value=true;
+  Next_Block_Free  if Next_Block.value=false;
+  Next_Block_Sensor1_true  if NextBlock_Sensor1.value=get_true or NextBlock_Sensor1.value=keep_true;
+  Next_Block_Sensor1_false if NextBlock_Sensor1.value=get_false or NextBlock_Sensor1.value=keep_false;
+  Next_Block_Sensor2_true  if NextBlock_Sensor2.value=get_true or NextBlock_Sensor2.value=keep_true;
+  Next_Block_Sensor2_false if NextBlock_Sensor2.value=get_false or NextBlock_Sensor2.value=keep_false;
+  
+  ForeignObject_Intrusion   if ForeignObject.value=true;
+  ForeignObject_None  if ForeignObject.value=false;
+  ForeignObject_Sensor1_true  if ForeignObject_Sensor1.value=get_true or ForeignObject_Sensor1.value=keep_true;
+  ForeignObject_Sensor1_false if ForeignObject_Sensor1.value=get_false or ForeignObject_Sensor1.value=keep_false;
+  ForeignObject_Sensor2_true  if ForeignObject_Sensor2.value=get_true or ForeignObject_Sensor2.value=keep_true;
+  ForeignObject_Sensor2_false if ForeignObject_Sensor2.value=get_false or ForeignObject_Sensor2.value=keep_false;
+
+  Level_Crossing_Busy   if CrossingMonitor.value=true;
+  Level_Crossing_Free  if CrossingMonitor.value=false;
+  CrossingMonitor_Sensor1_true  if CrossingMonitor_Sensor1.value=get_true or CrossingMonitor_Sensor1.value=keep_true;
+  CrossingMonitor_Sensor1_false if CrossingMonitor_Sensor1.value=get_false or CrossingMonitor_Sensor1.value=keep_false;
+  CrossingMonitor_Sensor2_true  if CrossingMonitor_Sensor2.value=get_true or CrossingMonitor_Sensor2.value=keep_true;
+  CrossingMonitor_Sensor2_false if CrossingMonitor_Sensor2.value=get_false or CrossingMonitor_Sensor2.value=keep_false;
+
+  GuardBarriers_Abnormal   if GuardBarriers.value=true;
+  GuardBarriers_Close  if GuardBarriers.value=false;
+  GuardBarriers_Sensor1_true  if GuardBarriers_Sensor1.value=get_true or GuardBarriers_Sensor1.value=keep_true;
+  GuardBarriers_Sensor1_false if GuardBarriers_Sensor1.value=get_false or GuardBarriers_Sensor1.value=keep_false; 
+  GuardBarriers_Sensor2_true  if GuardBarriers_Sensor2.value=get_true or GuardBarriers_Sensor2.value=keep_true;
+  GuardBarriers_Sensor2_false if GuardBarriers_Sensor2.value=get_false or GuardBarriers_Sensor2.value=keep_false;
+  
+  Consistency if (( (NextBlock_Sensor1.value=keep_false and NextBlock_Sensor2.value=keep_false ) or (NextBlock_Sensor1.value=keep_true and NextBlock_Sensor2.value=keep_true)) and (( GuardBarriers_Sensor1.value=keep_false and GuardBarriers_Sensor2.value=keep_false ) or (GuardBarriers_Sensor1.value=keep_true and GuardBarriers_Sensor2.value=keep_true))  and (( ForeignObject_Sensor1.value=keep_false and ForeignObject_Sensor2.value=keep_false ) or (ForeignObject_Sensor1.value=keep_true and ForeignObject_Sensor2.value=keep_true)) and (( CrossingMonitor_Sensor1.value=keep_false and CrossingMonitor_Sensor2.value=keep_false ) or (CrossingMonitor_Sensor1.value=keep_true and CrossingMonitor_Sensor2.value=keep_true)) );
+
+  Keep_TMA if (TMA_Gen.TMA_state=Generate and (CrossingMonitor_Sensor1.value=keep_false and CrossingMonitor_Sensor2.value=keep_false) and (GuardBarriers_Sensor1.value=keep_false and GuardBarriers_Sensor2.value=keep_false) and (ForeignObject_Sensor1.value=keep_false and ForeignObject_Sensor2.value=keep_false) and (NextBlock_Sensor1.value=keep_false and NextBlock_Sensor2.value=keep_false));
+
+ -- Cancel_TMA if Gen_TMA and not keep_TMA
+ 
+end Evaluation
+
+InitStates
+
+  Environment.Train_state=Approach and TMA_Gen.TMA_state=Pre_apply and Count.a=0 and ForeignObject_Sensor1.value=get_true
+  and ForeignObject_Sensor2.value=get_true and ForeignObject.value=true and CrossingMonitor_Sensor1.value=get_true and
+  CrossingMonitor_Sensor2.value=get_true and CrossingMonitor.value=true and NextBlock_Sensor1.value=get_true and
+  NextBlock_Sensor2.value=get_true and Next_Block.value=true and GuardBarriers_Sensor1.value=get_true and GuardBarriers_Sensor2.value=get_true and GuardBarriers.value=true;
+  
+end InitStates
+
+Formulae
+   AG((Gen_TMA) -> (Full_factors));
+   AG((NonGen_TMA) -> (Partial_factors));
+   AG((Consistency) -> (((EX Next_Block_Sensor1_false and EX Next_Block_Sensor2_false) or (EX Next_Block_Sensor1_true and EX Next_Block_Sensor2_true)) and
+                       ((EX CrossingMonitor_Sensor1_false and EX CrossingMonitor_Sensor2_false) or (EX CrossingMonitor_Sensor1_true and EX CrossingMonitor_Sensor2_true)) and
+                       ((EX GuardBarriers_Sensor1_false and EX GuardBarriers_Sensor2_false) or (EX GuardBarriers_Sensor1_true and EX GuardBarriers_Sensor2_true)) and
+                       ((EX ForeignObject_Sensor1_false and EX ForeignObject_Sensor2_false) or (EX ForeignObject_Sensor1_true and EX ForeignObject_Sensor2_true))));
+   AG((Keep_TMA) -> (CrossingMonitor_Sensor1_false and EX(CrossingMonitor_Sensor1_false) and CrossingMonitor_Sensor2_false and EX(CrossingMonitor_Sensor2_false) and
+                     GuardBarriers_Sensor1_false and EX(GuardBarriers_Sensor1_false) and GuardBarriers_Sensor2_false and EX(GuardBarriers_Sensor2_false) and
+                     Next_Block_Sensor1_false and EX(Next_Block_Sensor1_false) and Next_Block_Sensor2_false and EX(Next_Block_Sensor2_false) and
+                     ForeignObject_Sensor1_false and EX(ForeignObject_Sensor1_false) and ForeignObject_Sensor2_false and EX(ForeignObject_Sensor2_false)));
+   E((Gen_TMA) U (NonGen_TMA));
+   E((ForeignObject_Intrusion) U (ForeignObject_None));
+   E((Level_Crossing_Busy) U (Level_Crossing_Free));
+   E((Next_Block_Busy) U (Next_Block_Free));
+   E((GuardBarriers_Abnormal) U (GuardBarriers_Close));
+end Formulae
